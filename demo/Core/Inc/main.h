@@ -37,7 +37,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+void delay_us(uint16_t us);
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -64,8 +64,10 @@ void Error_Handler(void);
 #define Flame_GPIO_Port GPIOA
 #define Echo1_Pin GPIO_PIN_6
 #define Echo1_GPIO_Port GPIOA
+#define Echo1_EXTI_IRQn EXTI9_5_IRQn
 #define Echo2_Pin GPIO_PIN_7
 #define Echo2_GPIO_Port GPIOA
+#define Echo2_EXTI_IRQn EXTI9_5_IRQn
 #define Trig1_Pin GPIO_PIN_0
 #define Trig1_GPIO_Port GPIOB
 #define Trig2_Pin GPIO_PIN_1

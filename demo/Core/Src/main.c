@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "LiquidCrystal_I2C.h"
 #include "Servo.h"
+#include "dht11.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,8 +43,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-
 I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim1;
@@ -63,7 +62,6 @@ static void MX_I2C2_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_ADC1_Init(void);
 void positionTaskFunc(void const * argument);
 void distanceTaskFunc(void const * argument);
 
@@ -88,6 +86,8 @@ LiquidCrystal_I2C hlcd;
 Servo sv1;
 Servo sv2;
 uint16_t goc1, goc2;
+DHT11_Data_TypeDef DHT11_Data;
+float temp = 0, humi = 0;
 
 typedef struct{
 	uint8_t p1;
@@ -97,76 +97,43 @@ typedef struct{
 	uint8_t p5;
 }position_t;
 
-/*
-	@bref readDistance
-	Using timer 2 or 3 to read distance
-		f = 64Mhz, Prescale = 64
-		64MHz/64  = 1Mhz  => T = 1us => 1 count = 1us 
-*/
-uint16_t readDistance(TIM_HandleTypeDef htim, uint16_t trigPin, uint16_t echoPin){
-	uint32_t pMillis = 0;
-	uint32_t value1 = 0;
-	uint32_t value2 = 0;
-	uint16_t distance = 0;  // cm
-	
-	 HAL_GPIO_WritePin(GPIOB, trigPin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
-	__HAL_TIM_SET_COUNTER(&htim, 0);
-	while (__HAL_TIM_GET_COUNTER (&htim) < 10);  // wait for 10 us
-	HAL_GPIO_WritePin(GPIOB, trigPin, GPIO_PIN_RESET);  // pull the TRIG pin low
-
-	pMillis = HAL_GetTick();
-	while (!(HAL_GPIO_ReadPin (GPIOA, echoPin)) && pMillis + 10 >  HAL_GetTick());
-	value1 = __HAL_TIM_GET_COUNTER (&htim);
-
-	pMillis = HAL_GetTick();
-	while ((HAL_GPIO_ReadPin (GPIOA, echoPin)) && pMillis + 50 > HAL_GetTick());
-	value2 = __HAL_TIM_GET_COUNTER (&htim);
-
-	distance = (value2 - value1)* 0.034/2;
-	HAL_Delay(50);
-	return distance;
+void delay_us(uint16_t us){
+	__HAL_TIM_SET_COUNTER(&htim2,0);
+	__HAL_TIM_SetAutoreload(&htim2,us);   
+	__HAL_TIM_CLEAR_FLAG(&htim2,TIM_FLAG_UPDATE);
+	HAL_TIM_Base_Start_IT(&htim2); 
+	while(!__HAL_TIM_GET_FLAG(&htim2,TIM_FLAG_UPDATE));
+	HAL_TIM_Base_Stop_IT(&htim2);
 }
 
-
-
-/*
-	@bref controlServo
-	Create freq 50Hz to control servo
-	f = 50Hz = F / (presscale + 1) * (period + 1)
-*/
-void controlServo(_bool status){
-	//100% - 20000
-	if(status == OPEN){
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 10000); //50%
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 10000); //50%
-	}else if(status == CLOSE){
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0); //0%
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0); //0%
+uint8_t flagHRCDone= 0;
+uint8_t flag = 0;
+float getDistance(uint16_t trigPin){
+	if(trigPin == GPIO_PIN_0){
+		flag = 0;
+	}else if(trigPin == GPIO_PIN_0){
+		flag = 1;
 	}
-}
-
-/*
-	@bref setServo
-	Read distance in and distance out to control servo
-*/
-void setServo(){
-	uint16_t distanceIn = readDistance(htim2, GPIO_PIN_0, GPIO_PIN_6);
-	uint16_t distanceOut = readDistance(htim3, GPIO_PIN_1, GPIO_PIN_7);
-	
-	if( distanceIn <= DISTANCE_SET || distanceOut <= DISTANCE_SET){
-		controlServo(OPEN);
-		HAL_Delay(1000);
-	}else if(distanceIn >= DISTANCE_SET && distanceOut >= DISTANCE_SET){
-		HAL_Delay(1000);
-		controlServo(CLOSE);
+	HAL_GPIO_WritePin(GPIOB, trigPin, 1);
+	delay_us(15);
+	HAL_GPIO_WritePin(GPIOB, trigPin, 0);
+	flagHRCDone = 0;
+	uint16_t timeOut = HAL_GetTick();
+	while(flagHRCDone == 0){
+		if(HAL_GetTick() - timeOut >= 300){
+			return 0;
+		}
 	}
+	
+	return 0.017*__HAL_TIM_GET_COUNTER(&htim3);
 }
 
+void checkDistance(){
+	float d1 = getDistance(GPIO_PIN_0);
+	HAL_Delay(500);
+	float d2 = getDistance(GPIO_PIN_1);
+}
 
-/*
-	@bref checkPosition
-	Read status of some position
-*/
 position_t checkPosition(){
 	position_t result = {0, 0, 0, 0, 0};
 	result.p1 = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3);
@@ -177,19 +144,7 @@ position_t checkPosition(){
 	return result;
 }
 
-void testLcd(){
-	lcd_set_cursor(&hlcd, 0, 0);
-	lcd_printf(&hlcd,"Hello World");
-	HAL_Delay(1000);
-	lcd_set_cursor(&hlcd, 1, 0);
-	lcd_printf(&hlcd,"Hello World");
-	HAL_Delay(2000);
-	lcd_clear_display(&hlcd);
-}
-
 void displayPosition(){
-	testLcd();
-	
 	lcd_clear_display(&hlcd);
 	position_t p = checkPosition();
 	lcd_set_cursor(&hlcd, 0, 0);
@@ -213,39 +168,22 @@ void displayPosition(){
 		lcd_set_cursor(&hlcd, 0, 0);
 		lcd_printf(&hlcd,"   no Fire   ");
 	}
-	uint32_t ADC_value = HAL_ADC_GetValue(&hadc1);
-	double  voltage = (double)ADC_value/4095*3.3;
-	double celsius = (voltage-0.76)/0.0025+25;
-	lcd_set_cursor(&hlcd, 1, 0);
-	lcd_printf(&hlcd,"Temp: %f", celsius);
+	if(DHT11_ReadData(&DHT11_Data)){
+			temp = DHT11_Data.temp_int;
+			humi = DHT11_Data.humi_int;
+			lcd_set_cursor(&hlcd, 1, 0);
+		lcd_printf(&hlcd,"Temp:%.2f, Humi:%.2f", temp, humi);
+	}
+	
+	
 	HAL_Delay(2000);
 }
 
-/*
-	@bref checkFlame
-	check status of Flame Sensor
-	return TRUE or FALSE
-*/
-_bool checkFlame(){
-	return ((HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == 1) ? (TRUE) : (FALSE));
-}
 
 void initAll(){
 	lcd_init(&hlcd, &hi2c2, LCD_ADDR_DEFAULT);
-	//Servo
-	//HAL_TIM_Base_Start(&htim1);
-	//HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-	//HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-	
 	servo_init(&sv1,&htim1,TIM_CHANNEL_1);
 	servo_init(&sv2,&htim1,TIM_CHANNEL_2);
-	//Adc
-	HAL_ADC_Start_IT(&hadc1);
-	//Distance
-	HAL_TIM_Base_Start(&htim2); //hr04_1
-	HAL_TIM_Base_Start(&htim3); //hr04_2
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); //hr04_1
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET); //hr04_2
 }
 
 /* USER CODE END 0 */
@@ -282,7 +220,6 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
-  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 	initAll();
   /* USER CODE END 2 */
@@ -309,7 +246,7 @@ int main(void)
   positionTaskHandle = osThreadCreate(osThread(positionTask), NULL);
 
   /* definition and creation of distanceTask */
-  osThreadDef(distanceTask, distanceTaskFunc, osPriorityIdle, 0, 128);
+  osThreadDef(distanceTask, distanceTaskFunc, osPriorityHigh, 0, 128);
   distanceTaskHandle = osThreadCreate(osThread(distanceTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -339,7 +276,6 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -367,57 +303,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-/**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_ADC1_Init(void)
-{
-
-  /* USER CODE BEGIN ADC1_Init 0 */
-
-  /* USER CODE END ADC1_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC1_Init 1 */
-
-  /* USER CODE END ADC1_Init 1 */
-  /** Common config
-  */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-  /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
@@ -552,7 +437,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 7;
+  htim2.Init.Prescaler = 63;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -597,7 +482,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 7;
+  htim3.Init.Prescaler = 63;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -639,6 +524,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, Trig1_Pin|Trig2_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pin : Flame_Pin */
   GPIO_InitStruct.Pin = Flame_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -647,7 +538,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : Echo1_Pin Echo2_Pin */
   GPIO_InitStruct.Pin = Echo1_Pin|Echo2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -665,6 +556,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 }
 
@@ -707,7 +602,7 @@ void distanceTaskFunc(void const * argument)
 	
   for(;;)
   {
-		//setServo();
+		checkDistance();
 		goc1 = map(doc,0,180,0,180);
 		servo_write(&sv1,goc1);
 		HAL_Delay(3000);
@@ -715,10 +610,6 @@ void distanceTaskFunc(void const * argument)
 		if(doc>=180){
 			doc=10;
 		}
-		//controlServo(OPEN);
-		//HAL_Delay(3000);
-		//controlServo(CLOSE);
-		//HAL_Delay(3000);
     osDelay(1);
   }
   /* USER CODE END distanceTaskFunc */

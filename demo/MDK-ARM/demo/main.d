@@ -22,8 +22,6 @@ demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_exti.h
 demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h
 demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma_ex.h
 demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h
-demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h
-demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc_ex.h
 demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 demo\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h
@@ -46,3 +44,4 @@ demo\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 demo\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 demo\main.o: ../Core/Inc/LiquidCrystal_I2C.h
 demo\main.o: ../Core/Inc/Servo.h
+demo\main.o: ../Core/Inc/dht11.h

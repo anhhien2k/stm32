@@ -161,6 +161,33 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles EXTI line[9:5] interrupts.
+  */
+void EXTI9_5_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+
+  /* USER CODE END EXTI9_5_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_6);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_7);
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+	extern TIM_HandleTypeDef htim3;
+	extern uint8_t flagHRCDone;
+	extern uint8_t flag;
+	if( (HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6) == 1 && flag == 0) || 
+		  (HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_7) == 1 && flag == 1) ){
+		__HAL_TIM_SET_COUNTER(&htim3,0);
+		HAL_TIM_Base_Start(&htim3); 
+	}else if( (HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6) == 0 && flag == 0) || 
+						(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_7) == 0 && flag == 1) ){
+		flagHRCDone = 1;
+		HAL_TIM_Base_Stop(&htim3); 
+	}
+	
+  /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM4 global interrupt.
   */
 void TIM4_IRQHandler(void)
