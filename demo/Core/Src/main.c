@@ -42,6 +42,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 I2C_HandleTypeDef hi2c2;
 
 TIM_HandleTypeDef htim1;
@@ -61,6 +63,7 @@ static void MX_I2C2_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_ADC1_Init(void);
 void positionTaskFunc(void const * argument);
 void distanceTaskFunc(void const * argument);
 
@@ -71,6 +74,8 @@ void distanceTaskFunc(void const * argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 #define DISTANCE_SET    3 //cm
+#define POSITION_VALUE  1
+#define FLAME_VALUE 		1
 
 typedef uint8_t _bool;
 #define TRUE 		1
@@ -164,14 +169,57 @@ void setServo(){
 */
 position_t checkPosition(){
 	position_t result = {0, 0, 0, 0, 0};
-	result.p1 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
-	result.p2 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
-	result.p3 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2);
-	result.p4 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3);
-	result.p5 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4);
+	result.p1 = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3);
+	result.p2 = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4);
+	result.p3 = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
+	result.p4 = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6);
+	result.p5 = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7);
 	return result;
 }
 
+void testLcd(){
+	lcd_set_cursor(&hlcd, 0, 0);
+	lcd_printf(&hlcd,"Hello World");
+	HAL_Delay(1000);
+	lcd_set_cursor(&hlcd, 1, 0);
+	lcd_printf(&hlcd,"Hello World");
+	HAL_Delay(2000);
+	lcd_clear_display(&hlcd);
+}
+
+void displayPosition(){
+	testLcd();
+	
+	lcd_clear_display(&hlcd);
+	position_t p = checkPosition();
+	lcd_set_cursor(&hlcd, 0, 0);
+	lcd_printf(&hlcd," 1  2  3  4  5 ");
+	HAL_Delay(100);
+	lcd_set_cursor(&hlcd, 1, 0);
+	lcd_printf(&hlcd," %c  %c  %c  %c  %c ",
+		(p.p1 == POSITION_VALUE) ? ('v') : ('x'),
+		(p.p2 == POSITION_VALUE) ? ('v') : ('x'),
+		(p.p3 == POSITION_VALUE) ? ('v') : ('x'),
+		(p.p4 == POSITION_VALUE) ? ('v') : ('x'),
+		(p.p5 == POSITION_VALUE) ? ('v') : ('x')
+	);
+	HAL_Delay(2000);
+	
+	lcd_clear_display(&hlcd);
+	if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == FLAME_VALUE){
+		lcd_set_cursor(&hlcd, 0, 0);
+		lcd_printf(&hlcd,"   is Fire   ");
+	}else{
+		lcd_set_cursor(&hlcd, 0, 0);
+		lcd_printf(&hlcd,"   no Fire   ");
+	}
+	uint32_t ADC_value = HAL_ADC_GetValue(&hadc1);
+	double  voltage = (double)ADC_value/4095*3.3;
+	double celsius = (voltage-0.76)/0.0025+25;
+	lcd_set_cursor(&hlcd, 1, 0);
+	lcd_printf(&hlcd,"Temp: %f", celsius);
+	HAL_Delay(2000);
+}
 
 /*
 	@bref checkFlame
@@ -191,22 +239,13 @@ void initAll(){
 	
 	servo_init(&sv1,&htim1,TIM_CHANNEL_1);
 	servo_init(&sv2,&htim1,TIM_CHANNEL_2);
-	
+	//Adc
+	HAL_ADC_Start_IT(&hadc1);
 	//Distance
 	HAL_TIM_Base_Start(&htim2); //hr04_1
 	HAL_TIM_Base_Start(&htim3); //hr04_2
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET); //hr04_1
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET); //hr04_2
-}
-
-void testLcd(){
-	lcd_set_cursor(&hlcd, 0, 0);
-	lcd_printf(&hlcd,"Hello World");
-	HAL_Delay(1000);
-	lcd_set_cursor(&hlcd, 1, 0);
-	lcd_printf(&hlcd,"Hello World");
-	HAL_Delay(2000);
-	lcd_clear_display(&hlcd);
 }
 
 /* USER CODE END 0 */
@@ -243,6 +282,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 	initAll();
   /* USER CODE END 2 */
@@ -299,6 +339,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -326,6 +367,57 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -460,7 +552,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 63;
+  htim2.Init.Prescaler = 7;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -505,7 +597,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 63;
+  htim3.Init.Prescaler = 7;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -547,13 +639,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, Trig1_Pin|Trig2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : Position1_Pin Position2_Pin Position3_Pin Position4_Pin
-                           Position5_Pin Flame_Pin */
-  GPIO_InitStruct.Pin = Position1_Pin|Position2_Pin|Position3_Pin|Position4_Pin
-                          |Position5_Pin|Flame_Pin;
+  /*Configure GPIO pin : Flame_Pin */
+  GPIO_InitStruct.Pin = Flame_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(Flame_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Echo1_Pin Echo2_Pin */
   GPIO_InitStruct.Pin = Echo1_Pin|Echo2_Pin;
@@ -566,6 +656,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB3 PB4 PB5 PB6
+                           PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6
+                          |GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
@@ -588,7 +686,7 @@ void positionTaskFunc(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-		testLcd();
+		displayPosition();
     osDelay(1);
   }
   /* USER CODE END 5 */

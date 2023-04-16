@@ -60,16 +60,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define Position1_Pin GPIO_PIN_0
-#define Position1_GPIO_Port GPIOA
-#define Position2_Pin GPIO_PIN_1
-#define Position2_GPIO_Port GPIOA
-#define Position3_Pin GPIO_PIN_2
-#define Position3_GPIO_Port GPIOA
-#define Position4_Pin GPIO_PIN_3
-#define Position4_GPIO_Port GPIOA
-#define Position5_Pin GPIO_PIN_4
-#define Position5_GPIO_Port GPIOA
 #define Flame_Pin GPIO_PIN_5
 #define Flame_GPIO_Port GPIOA
 #define Echo1_Pin GPIO_PIN_6
