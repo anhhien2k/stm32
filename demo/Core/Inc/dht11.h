@@ -5,13 +5,13 @@
 #include "main.h"
 
 
-#define DHT11_PORT		    GPIOA
+#define DHT11_PORT		   GPIOA
 #define DHT11_PIN		      GPIO_PIN_0
  
 #define DHT11_OUT_1				HAL_GPIO_WritePin(DHT11_PORT, DHT11_PIN, GPIO_PIN_SET)
 #define DHT11_OUT_0				HAL_GPIO_WritePin(DHT11_PORT, DHT11_PIN, GPIO_PIN_RESET)
  
-#define DHT11_IN					HAL_GPIO_ReadPin(DHT11_PORT, DHT11_PIN)
+#define DHT11_IN					        HAL_GPIO_ReadPin(DHT11_PORT, DHT11_PIN)
  
 typedef struct
 {
@@ -24,7 +24,5 @@ typedef struct
 } DHT11_Data_TypeDef;
  
 uint8_t DHT11_ReadData(DHT11_Data_TypeDef* DHT11_Data);
-
-
 
 #endif

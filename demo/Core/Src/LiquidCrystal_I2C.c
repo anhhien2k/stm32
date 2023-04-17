@@ -7,7 +7,6 @@
 #include <string.h>
 #include <stdarg.h>
 #include "LiquidCrystal_I2C.h"
-
 static void lcd_send_cmd (LiquidCrystal_I2C *lcd, uint8_t cmd)
 {
   uint8_t data_h, data_l;

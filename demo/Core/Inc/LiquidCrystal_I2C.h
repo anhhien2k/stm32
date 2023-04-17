@@ -8,37 +8,37 @@
 
 #include "stm32f1xx_hal.h"
 // commands
-#define LCD_CLEARDISPLAY 		0x01
-#define LCD_RETURNHOME 			0x02
-#define LCD_ENTRYMODESET 		0x04
-#define LCD_DISPLAYCONTROL 	0x08
-#define LCD_CURSORSHIFT 		0x10
-#define LCD_FUNCTIONSET 		0x20
-#define LCD_SETCGRAMADDR 		0x40
-#define LCD_SETDDRAMADDR 		0x80
+#define LCD_CLEARDISPLAY 0x01
+#define LCD_RETURNHOME 0x02
+#define LCD_ENTRYMODESET 0x04
+#define LCD_DISPLAYCONTROL 0x08
+#define LCD_CURSORSHIFT 0x10
+#define LCD_FUNCTIONSET 0x20
+#define LCD_SETCGRAMADDR 0x40
+#define LCD_SETDDRAMADDR 0x80
 
 // flags for display on/off control
-#define LCD_DISPLAYON 			0x04
-#define LCD_DISPLAYOFF 			0x00
-#define LCD_CURSORON 				0x02
-#define LCD_CURSOROFF 			0x00
-#define LCD_BLINKON 				0x01
-#define LCD_BLINKOFF 				0x00
+#define LCD_DISPLAYON 0x04
+#define LCD_DISPLAYOFF 0x00
+#define LCD_CURSORON 0x02
+#define LCD_CURSOROFF 0x00
+#define LCD_BLINKON 0x01
+#define LCD_BLINKOFF 0x00
 
 // flags for backlight control
-#define LCD_BACKLIGHT 			0x08
-#define LCD_NOBACKLIGHT 		0x00
+#define LCD_BACKLIGHT 0x08
+#define LCD_NOBACKLIGHT 0x00
 
-#define LCD_RS_SET					0x01
-#define LCD_RS_CLEAR				0x00
+#define LCD_RS_SET	0x01
+#define LCD_RS_CLEAR	0x00
 
-#define LCD_EN_SET					0x04
-#define LCD_EN_CLEAR				0x00
+#define LCD_EN_SET	0x04
+#define LCD_EN_CLEAR	0x00
 
-#define LCD_ADDR_DEFAULT 		0x27
-
-typedef struct{
-	uint8_t Addr;
+#define LCD_ADDR_DEFAULT 0x27
+typedef struct
+{
+	uint8_t Addr;//dia chi cua LCD mac dinh 0x27
 	I2C_HandleTypeDef *pI2c;
 	uint8_t DisplayControl;
 }LiquidCrystal_I2C;

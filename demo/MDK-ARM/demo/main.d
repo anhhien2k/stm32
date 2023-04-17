@@ -42,6 +42,10 @@ demo\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 demo\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 demo\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 demo\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-demo\main.o: ../Core/Inc/LiquidCrystal_I2C.h
-demo\main.o: ../Core/Inc/Servo.h
 demo\main.o: ../Core/Inc/dht11.h
+demo\main.o: ../Core/Inc/hr04.h
+demo\main.o: ../Core/Inc/Servo.h
+demo\main.o: ../Core/Inc/Util.h
+demo\main.o: ../Core/Inc/LiquidCrystal_I2C.h
+demo\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+demo\main.o: ../Core/Inc/MyDelay.h

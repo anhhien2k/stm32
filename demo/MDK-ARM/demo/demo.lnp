@@ -1,8 +1,11 @@
 --cpu Cortex-M3
 "demo\startup_stm32f103xb.o"
-"demo\liquidcrystal_i2c.o"
-"demo\servo.o"
 "demo\dht11.o"
+"demo\hr04.o"
+"demo\liquidcrystal_i2c.o"
+"demo\mydelay.o"
+"demo\servo.o"
+"demo\util.o"
 "demo\main.o"
 "demo\freertos.o"
 "demo\stm32f1xx_it.o"

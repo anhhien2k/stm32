@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;                  ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;                  ../Drivers/STM32F1xx_HAL_Driver/Inc;                  ../Middlewares/Third_Party/FreeRTOS/Source/include;                  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;                  ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3;                  ../Drivers/CMSIS/Device/ST/STM32F1xx/Include;                  ../Drivers/CMSIS/Include</IncludePath>
+              <IncludePath>../Core/Inc;                   ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;                   ../Drivers/STM32F1xx_HAL_Driver/Inc;                   ../Middlewares/Third_Party/FreeRTOS/Source/include;                   ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;                   ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3;                   ../Drivers/CMSIS/Device/ST/STM32F1xx/Include;                   ../Drivers/CMSIS/Include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -394,9 +394,24 @@
           <GroupName>Application/User/Core</GroupName>
           <Files>
             <File>
+              <FileName>dht11.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\dht11.c</FilePath>
+            </File>
+            <File>
+              <FileName>hr04.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\hr04.c</FilePath>
+            </File>
+            <File>
               <FileName>LiquidCrystal_I2C.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\LiquidCrystal_I2C.c</FilePath>
+            </File>
+            <File>
+              <FileName>MyDelay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\MyDelay.c</FilePath>
             </File>
             <File>
               <FileName>Servo.c</FileName>
@@ -404,9 +419,9 @@
               <FilePath>..\Core\Src\Servo.c</FilePath>
             </File>
             <File>
-              <FileName>dht11.c</FileName>
+              <FileName>Util.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Core\Src\dht11.c</FilePath>
+              <FilePath>..\Core\Src\Util.c</FilePath>
             </File>
             <File>
               <FileName>main.c</FileName>
@@ -594,5 +609,14 @@
     </components>
     <files/>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>demo</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>

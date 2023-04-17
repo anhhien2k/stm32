@@ -23,9 +23,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "LiquidCrystal_I2C.h"
-#include "Servo.h"
 #include "dht11.h"
+#include "hr04.h"
+#include "Servo.h"
+#include "Util.h"
+#include "LiquidCrystal_I2C.h"
+#include "stdbool.h"
+#include "MyDelay.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -97,43 +101,6 @@ typedef struct{
 	uint8_t p5;
 }position_t;
 
-void delay_us(uint16_t us){
-	__HAL_TIM_SET_COUNTER(&htim2,0);
-	__HAL_TIM_SetAutoreload(&htim2,us);   
-	__HAL_TIM_CLEAR_FLAG(&htim2,TIM_FLAG_UPDATE);
-	HAL_TIM_Base_Start_IT(&htim2); 
-	while(!__HAL_TIM_GET_FLAG(&htim2,TIM_FLAG_UPDATE));
-	HAL_TIM_Base_Stop_IT(&htim2);
-}
-
-uint8_t flagHRCDone= 0;
-uint8_t flag = 0;
-float getDistance(uint16_t trigPin){
-	if(trigPin == GPIO_PIN_0){
-		flag = 0;
-	}else if(trigPin == GPIO_PIN_0){
-		flag = 1;
-	}
-	HAL_GPIO_WritePin(GPIOB, trigPin, 1);
-	delay_us(15);
-	HAL_GPIO_WritePin(GPIOB, trigPin, 0);
-	flagHRCDone = 0;
-	uint16_t timeOut = HAL_GetTick();
-	while(flagHRCDone == 0){
-		if(HAL_GetTick() - timeOut >= 300){
-			return 0;
-		}
-	}
-	
-	return 0.017*__HAL_TIM_GET_COUNTER(&htim3);
-}
-
-void checkDistance(){
-	float d1 = getDistance(GPIO_PIN_0);
-	HAL_Delay(500);
-	float d2 = getDistance(GPIO_PIN_1);
-}
-
 position_t checkPosition(){
 	position_t result = {0, 0, 0, 0, 0};
 	result.p1 = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3);
@@ -162,29 +129,44 @@ void displayPosition(){
 	
 	lcd_clear_display(&hlcd);
 	if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == FLAME_VALUE){
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
 		lcd_set_cursor(&hlcd, 0, 0);
 		lcd_printf(&hlcd,"   is Fire   ");
 	}else{
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
 		lcd_set_cursor(&hlcd, 0, 0);
 		lcd_printf(&hlcd,"   no Fire   ");
 	}
 	if(DHT11_ReadData(&DHT11_Data)){
-			temp = DHT11_Data.temp_int;
-			humi = DHT11_Data.humi_int;
-			lcd_set_cursor(&hlcd, 1, 0);
+		temp = DHT11_Data.temp_int;
+		humi = DHT11_Data.humi_int;
+		lcd_set_cursor(&hlcd, 1, 0);
 		lcd_printf(&hlcd,"Temp:%.2f, Humi:%.2f", temp, humi);
 	}
-	
-	
 	HAL_Delay(2000);
 }
 
+void controlServo(){
+	float hr04_1 = hr04_getDistance1(GPIOB, GPIO_PIN_0);
+	float hr04_2 =  hr04_getDistance2(GPIOB, GPIO_PIN_1);
+	
+	if(hr04_1 < DISTANCE_SET){
+		servo_write(&sv1, 90);
+		servo_write(&sv2, 90);
+	}else if(hr04_2 < DISTANCE_SET){
+		servo_write(&sv1, 0);
+		servo_write(&sv2, 0);
+	}
+	
+}
 
 void initAll(){
+	delay_init();
 	lcd_init(&hlcd, &hi2c2, LCD_ADDR_DEFAULT);
 	servo_init(&sv1,&htim1,TIM_CHANNEL_1);
 	servo_init(&sv2,&htim1,TIM_CHANNEL_2);
 }
+
 
 /* USER CODE END 0 */
 
@@ -522,6 +504,9 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(COI_GPIO_Port, COI_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, Trig1_Pin|Trig2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PA0 */
@@ -529,6 +514,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : COI_Pin */
+  GPIO_InitStruct.Pin = COI_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(COI_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Flame_Pin */
   GPIO_InitStruct.Pin = Flame_Pin;
@@ -582,7 +574,7 @@ void positionTaskFunc(void const * argument)
   for(;;)
   {
 		displayPosition();
-    osDelay(1);
+    osDelay(500);
   }
   /* USER CODE END 5 */
 }
@@ -597,20 +589,12 @@ void positionTaskFunc(void const * argument)
 void distanceTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN distanceTaskFunc */
-	uint8_t doc=90;
   /* Infinite loop */
 	
   for(;;)
   {
-		checkDistance();
-		goc1 = map(doc,0,180,0,180);
-		servo_write(&sv1,goc1);
-		HAL_Delay(3000);
-		doc+=10;
-		if(doc>=180){
-			doc=10;
-		}
-    osDelay(1);
+		controlServo();
+    osDelay(500);
   }
   /* USER CODE END distanceTaskFunc */
 }
