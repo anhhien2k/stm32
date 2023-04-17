@@ -150,14 +150,15 @@ void controlServo(){
 	float hr04_1 = hr04_getDistance1(GPIOB, GPIO_PIN_0);
 	float hr04_2 =  hr04_getDistance2(GPIOB, GPIO_PIN_1);
 	
-	if(hr04_1 < DISTANCE_SET){
+	if(hr04_1 <= DISTANCE_SET || hr04_2 <= DISTANCE_SET){
 		servo_write(&sv1, 90);
 		servo_write(&sv2, 90);
-	}else if(hr04_2 < DISTANCE_SET){
+		HAL_Delay(2000);
+	}else{
+		HAL_Delay(2000);
 		servo_write(&sv1, 0);
 		servo_write(&sv2, 0);
 	}
-	
 }
 
 void initAll(){
